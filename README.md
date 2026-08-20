@@ -177,3 +177,13 @@ caught.
   `HANDOVER.md`), but they deserve real tests before this goes near production.
 - S3 and Volanea adapters are untested against live services.
 - No deployment config beyond the app being stateless and disposable.
+
+---
+
+## Deployment
+
+- **API**: Elastic Beanstalk (`chimera-env`, us-east-2) via CodePipeline from `main`.
+  Public URL: `https://chimera-api.zealoop.com` (health: `/health`).
+  The `.platform/hooks/prebuild` hook compiles TypeScript on the instance, so the
+  pipeline can ship raw source. Runtime config lives in EB environment properties.
+- **Dashboard** / **Web**: AWS Amplify, auto-deploy from `main` of their repos.
