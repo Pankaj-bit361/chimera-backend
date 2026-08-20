@@ -27,7 +27,10 @@ export function createApp() {
     cors({
       origin(origin, callback) {
         // Server-to-server calls (Next.js build) send no Origin header.
-        if (!origin || env.corsOrigins.includes(origin)) return callback(null, true);
+        // CORS_ORIGINS=* allows every origin (reflected, so credentials still work).
+        if (!origin || env.corsOrigins.includes('*') || env.corsOrigins.includes(origin)) {
+          return callback(null, true);
+        }
         callback(new Error(`Origin not allowed: ${origin}`));
       },
       credentials: true,
