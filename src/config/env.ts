@@ -72,7 +72,10 @@ export const env = {
   storage: {
     driver: optional('STORAGE_DRIVER', 'local') as 'local' | 's3',
     localDir: optional('LOCAL_STORAGE_DIR', './var/uploads'),
-    localPublicUrl: optional('LOCAL_STORAGE_PUBLIC_URL', 'http://localhost:4000/uploads'),
+    // Defaults to <API_BASE_URL>/uploads so a deployment only has to set API_BASE_URL.
+    localPublicUrl:
+      optional('LOCAL_STORAGE_PUBLIC_URL') ||
+      `${optional('API_BASE_URL', 'http://localhost:4000').replace(/\/$/, '')}/uploads`,
     s3Bucket: optional('S3_BUCKET'),
     s3Region: optional('S3_REGION', 'ap-south-1'),
     s3AccessKeyId: optional('S3_ACCESS_KEY_ID'),
