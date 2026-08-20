@@ -5,7 +5,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../../.."   # app staging dir
 if [ ! -f dist/index.js ]; then
   echo "[prebuild] dist/ missing — installing deps and compiling"
-  npm ci --no-audit --no-fund
+  # --include=dev: NODE_ENV=production makes npm skip devDependencies (typescript)
+  npm ci --include=dev --no-audit --no-fund
   npm run build
   npm prune --omit=dev
 else
