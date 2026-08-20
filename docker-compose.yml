@@ -1,0 +1,19 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: chimera-mongo
+    restart: unless-stopped
+    # 27018 on the host: 27017 was already taken by another project's Mongo on
+    # this machine. Change both sides here and in MONGODB_URI if you prefer.
+    ports:
+      - "27018:27017"
+    volumes:
+      - chimera-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  chimera-mongo-data:
