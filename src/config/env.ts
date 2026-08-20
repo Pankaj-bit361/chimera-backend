@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { createHmac } from 'node:crypto';
 
 function required(key: string): string {
   const value = process.env[key];
@@ -23,11 +24,19 @@ function int(key: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+const isProduction = optional('NODE_ENV', 'development') === 'production';
+const jwtSecret = required('JWT_SECRET');
+// DOCUMENT_LINK_SECRET is optional: when unset it is derived from JWT_SECRET
+// (HMAC, so it is still a distinct key). Set it explicitly to rotate one
+// without the other.
+const documentLinkSecret =
+  optional('DOCUMENT_LINK_SECRET') ||
+  createHmac('sha256', jwtSecret).update('document-link').digest('hex');
 const mailDomain = optional('MAIL_DOMAIN', 'chimera-biotech.com');
 
 export const env = {
   nodeEnv: optional('NODE_ENV', 'development'),
-  isProduction: optional('NODE_ENV', 'development') === 'production',
+  isProduction,
   port: int('PORT', 4000),
   corsOrigins: optional('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173')
     .split(',')
@@ -36,9 +45,9 @@ export const env = {
 
   mongoUri: required('MONGODB_URI'),
 
-  jwtSecret: required('JWT_SECRET'),
+  jwtSecret,
   jwtTtl: optional('JWT_TTL', '12h'),
-  documentLinkSecret: required('DOCUMENT_LINK_SECRET'),
+  documentLinkSecret,
   documentLinkTtlMinutes: int('DOCUMENT_LINK_TTL_MINUTES', 60),
 
   /**
@@ -47,9 +56,10 @@ export const env = {
    * its buckets on req.ip: with a hop trusted and no proxy in front, any client
    * can hand itself a fresh bucket per request by inventing an XFF value, and
    * every limiter on the service — login, lead forms, downloads — stops
-   * existing. Set TRUST_PROXY=1 in the deployment that has an ingress.
+   * existing. Defaults to 1 in production (EB/ALB/nginx always sit in front),
+   * 0 otherwise. Override with TRUST_PROXY if the topology differs.
    */
-  trustProxy: int('TRUST_PROXY', 0),
+  trustProxy: int('TRUST_PROXY', isProduction ? 1 : 0),
 
   /**
    * The API's own public origin. Signed download links are built from this and
