@@ -11,6 +11,14 @@ export type MailMessage = {
   text: string;
   html?: string;
   replyTo?: string;
+  /** Copied recipients. The Volanea API has no CC, so there each gets its own copy. */
+  cc?: string[];
+  /**
+   * A stored Volanea template to render instead of `text`. Only the volanea-api
+   * driver uses it; the file and SMTP drivers keep sending `text`, so `text`
+   * must always be a complete message on its own.
+   */
+  template?: { id: string; variables: Record<string, string> };
   /** Tag used for log correlation, e.g. `lead:distributor`. */
   tag?: string;
 };

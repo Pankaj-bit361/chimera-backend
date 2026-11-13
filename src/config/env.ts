@@ -84,7 +84,7 @@ export const env = {
   },
 
   mail: {
-    driver: optional('MAIL_DRIVER', 'file') as 'file' | 'volanea',
+    driver: optional('MAIL_DRIVER', 'file') as 'file' | 'volanea' | 'volanea-api',
     localDir: optional('LOCAL_MAIL_DIR', './var/mail'),
     domain: mailDomain,
     fromName: optional('MAIL_FROM_NAME', 'Chimera Biotech'),
@@ -100,11 +100,24 @@ export const env = {
       user: optional('VOLANEA_USER'),
       password: optional('VOLANEA_PASSWORD'),
       secure: bool('VOLANEA_SECURE', false),
+      // MAIL_DRIVER=volanea-api: HTTPS POST /v1/send instead of SMTP.
+      apiUrl: optional('VOLANEA_API_URL', 'https://api.volanea.com'),
+      apiKey: optional('VOLANEA_API_KEY'),
+      // Signs POST /api/webhooks/volanea deliveries (whsec_…, from the Volanea dashboard).
+      webhookSecret: optional('VOLANEA_WEBHOOK_SECRET'),
+      // Template ids in the Chimera Volanea project. Not secrets; env overrides them.
+      templates: {
+        leadInternal: optional('VOLANEA_TEMPLATE_LEAD_INTERNAL', 'tmpl-bab49f11-ccf8-493d-8ae7-476929be72be'),
+        ack: optional('VOLANEA_TEMPLATE_ACK', 'tmpl-c1beacb1-19ac-4ecf-8ad1-d881b209243b'),
+        document: optional('VOLANEA_TEMPLATE_DOCUMENT', 'tmpl-24bc3658-23b1-4f5b-8cd6-2d99cdbc01fc'),
+      },
     },
   },
 
   web: {
     baseUrl: optional('WEB_BASE_URL', 'http://localhost:3000'),
+    // The admin dashboard (separate app), linked from lead notification emails.
+    dashboardUrl: optional('DASHBOARD_URL', 'https://main.de2an3wfvj9s9.amplifyapp.com'),
     revalidateSecret: optional('REVALIDATE_SECRET'),
   },
 

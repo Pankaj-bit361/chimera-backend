@@ -32,6 +32,7 @@ export const volaneaMail: MailAdapter = {
     const info = await transporter().sendMail({
       from: `"${env.mail.fromName}" <no-reply@${env.mail.domain}>`,
       to: message.to,
+      cc: message.cc,
       replyTo: message.replyTo,
       subject: message.subject,
       text: message.text,

@@ -28,6 +28,7 @@ export const fileMail: MailAdapter = {
       `Date: ${new Date().toUTCString()}`,
       `From: ${from}`,
       `To: ${recipients.join(', ')}`,
+      message.cc?.length ? `Cc: ${message.cc.join(', ')}` : null,
       message.replyTo ? `Reply-To: ${message.replyTo}` : null,
       `Subject: ${message.subject}`,
       message.tag ? `X-Chimera-Tag: ${message.tag}` : null,

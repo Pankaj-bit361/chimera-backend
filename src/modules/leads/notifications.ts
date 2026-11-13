@@ -1,5 +1,6 @@
 import { env } from '../../config/env.js';
 import { mail } from '../../adapters/mail/index.js';
+import { trackVolaneaEvent } from '../../adapters/mail/volanea-api.js';
 import { logger } from '../../lib/logger.js';
 import type { LeadDoc } from '../../models/Lead.js';
 import {
@@ -55,10 +56,12 @@ function internalBody(lead: LeadDoc, extra: Array<string | null> = []): string {
     row('Source page', lead.source?.page),
     row('Referrer', lead.source?.referrer),
     row('Campaign', lead.source?.utmCampaign),
-    '',
-    `Open in dashboard: ${env.web.baseUrl.replace(/\/$/, '')}/../leads/${String(lead._id)}`,
   ];
   return lines.filter((line): line is string => line !== null).join('\n');
+}
+
+function dashboardLink(lead: LeadDoc): string {
+  return `${env.web.dashboardUrl.replace(/\/$/, '')}/leads/${String(lead._id)}`;
 }
 
 function channelExtras(lead: LeadDoc): Array<string | null> {
@@ -80,12 +83,17 @@ export async function notifyInternal(lead: LeadDoc): Promise<string[]> {
   const to = addressesFor(lead.type as LeadType, lead.country ?? undefined);
   const label = TYPE_SUBJECTS[lead.type as LeadType];
   const who = lead.company || lead.name;
+  const details = internalBody(lead, channelExtras(lead));
 
   await mail.send({
     to,
     replyTo: lead.email,
     subject: `[${label}] ${who}${lead.interestLabel ? ` — ${lead.interestLabel}` : ''}`,
-    text: internalBody(lead, channelExtras(lead)),
+    text: `${details}\n\nOpen in dashboard: ${dashboardLink(lead)}`,
+    template: {
+      id: env.mail.volanea.templates.leadInternal,
+      variables: { leadType: label, who, details, dashboardUrl: dashboardLink(lead) },
+    },
     tag: `lead:${lead.type}`,
   });
 
@@ -125,15 +133,34 @@ export async function acknowledgeBuyer(lead: LeadDoc, downloadUrl?: string): Pro
   lines.push(
     'Regards,',
     'Chimera Biotech Pvt Ltd',
-    `${env.mail.inboxes.sales} · ${env.mail.domain}`,
+    `${env.mail.inboxes.info} · ${env.mail.domain}`,
   );
 
+  const documentLabel = kind ? DOCUMENT_KIND_LABELS[kind] : 'document';
+  const inbox = env.mail.inboxes.info;
+  const { templates } = env.mail.volanea;
+
+  // Buyer replies land in the general inbox, which also keeps a copy.
   await mail.send({
     to: lead.email,
+    replyTo: inbox,
+    cc: [inbox],
     subject: downloadUrl
-      ? `Your ${kind ? DOCUMENT_KIND_LABELS[kind] : 'document'} from Chimera Biotech`
+      ? `Your ${documentLabel} from Chimera Biotech`
       : 'We have received your enquiry — Chimera Biotech',
     text: lines.join('\n'),
+    template: downloadUrl
+      ? {
+          id: templates.document,
+          variables: {
+            name: lead.name,
+            documentLabel,
+            downloadUrl,
+            ttlMinutes: String(env.documentLinkTtlMinutes),
+            inbox,
+          },
+        }
+      : { id: templates.ack, variables: { name: lead.name, intro: ACK_INTRO[type], inbox } },
     tag: `ack:${lead.type}`,
   });
 }
@@ -157,4 +184,17 @@ export async function dispatchLeadNotifications(
     logger.error(`lead ${String(lead._id)} notification failed`, error);
   }
   await lead.save();
+
+  // Lets Volanea workflows react, e.g. `lead.quote` → 3-day follow-up.
+  await trackVolaneaEvent({
+    name: `lead.${lead.type}`,
+    email: lead.email,
+    firstName: lead.name.split(/\s+/)[0],
+    data: {
+      company: lead.company ?? '',
+      country: lead.country ?? '',
+      interest: lead.interestLabel ?? '',
+      interestSuffix: lead.interestLabel ? ` for ${lead.interestLabel}` : '',
+    },
+  });
 }

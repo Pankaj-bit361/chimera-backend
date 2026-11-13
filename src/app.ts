@@ -7,6 +7,7 @@ import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { adminRouter } from './routes/admin.js';
 import { authRouter } from './routes/auth.js';
 import { publicRouter } from './routes/public.js';
+import { webhooksRouter } from './routes/webhooks.js';
 
 export function createApp() {
   const app = express();
@@ -36,6 +37,8 @@ export function createApp() {
       credentials: true,
     }),
   );
+  // Before the JSON parser: webhook signatures are checked against the raw body.
+  app.use('/api/webhooks', webhooksRouter);
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
